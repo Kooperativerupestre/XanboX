@@ -7,11 +7,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type User struct {
-	ID   uuid.UUID `bun:"id, pk"`
-	Name string    `bun:"name"`
-}
-
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	Get(ctx context.Context, id uuid.UUID) (*User, error)
