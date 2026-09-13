@@ -18,11 +18,15 @@ func createHandler(service TaskService) http.HandlerFunc {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
+
 		task := &Task{
-			MadeAt:   time.Now(),
-			Language: req.Language,
-			Source:   req.Source,
-			Maker:    req.Maker,
+			MadeAt:                 time.Now(),
+			Image:                  req.Image,
+			EnvironmentPrepareCode: req.EnvironmentPrepareCode,
+			ExecutionCode:          req.ExecutionCode,
+			Source:                 req.Source,
+			Maker:                  req.Maker,
+			Status:                 TaskPending,
 		}
 
 		err = service.Create(r.Context(), task)
