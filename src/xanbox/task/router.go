@@ -13,8 +13,7 @@ func createHandler(service TaskService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateTaskRequest
 
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
@@ -29,34 +28,43 @@ func createHandler(service TaskService) http.HandlerFunc {
 			Status:                 TaskPending,
 		}
 
-		err = service.Create(r.Context(), task)
+		dbID, dockerID, err, deleteErr := service.Create(
+			r.Context(),
+			task,
+		)
 
 		if err != nil {
-			http.Error(w, "failed to create task", http.StatusInternalServerError)
+			if deleteErr != nil {
+				http.Error(
+					w,
+					"failed to create task and failed to clean up execution",
+					http.StatusInternalServerError,
+				)
+				return
+			}
+
+			http.Error(
+				w,
+				"failed to create task",
+				http.StatusInternalServerError,
+			)
 			return
+		}
+
+		response := struct {
+			ID       uuid.UUID `json:"id"`
+			DockerID string    `json:"docker_id"`
+		}{
+			ID:       dbID,
+			DockerID: dockerID,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(task)
 
-	}
-}
-
-func deleteHandler(service TaskService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := uuid.Parse(chi.URLParam(r, "id"))
-
-		if err != nil {
-			http.Error(w, "invalid task ID", http.StatusBadRequest)
-		}
-
-		err = service.Delete(r.Context(), id)
-		if err != nil {
-			http.Error(w, "failed to delete task", http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
 			return
 		}
-		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -67,14 +75,42 @@ func getHandler(service TaskService) http.HandlerFunc {
 			http.Error(w, "invalid task ID", http.StatusBadRequest)
 			return
 		}
-		user, err := service.Get(r.Context(), id)
 
+		task, err := service.Get(r.Context(), id)
 		if err != nil {
 			http.Error(w, "failed to get task", http.StatusInternalServerError)
 			return
 		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(user)
+
+		if err := json.NewEncoder(w).Encode(task); err != nil {
+			return
+		}
+	}
+}
+
+func syncHandler(service TaskService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := uuid.Parse(chi.URLParam(r, "id"))
+		if err != nil {
+			http.Error(w, "invalid task ID", http.StatusBadRequest)
+			return
+		}
+
+		var req SyncTaskRequest
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		if err := service.Sync(r.Context(), id, req.DockerID); err != nil {
+			http.Error(w, "failed to sync task", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -83,6 +119,7 @@ func NewTaskRouter(service TaskService) chi.Router {
 
 	r.Post("/", createHandler(service))
 	r.Get("/{id}", getHandler(service))
-	r.Delete("/{id}", deleteHandler(service))
+	r.Post("/{id}/sync", syncHandler(service))
+
 	return r
 }

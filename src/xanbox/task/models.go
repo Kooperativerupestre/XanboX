@@ -3,6 +3,7 @@ package task
 import (
 	"time"
 
+	"github.com/Kooperativerupestre/XanboX/src/xanbox/task/source"
 	"github.com/google/uuid"
 )
 
@@ -21,18 +22,15 @@ func ValidateStatus(status string) bool {
 	return true
 }
 
-type SourceFile struct {
-	Path string
-	Code string
-}
-
 type Task struct {
-	ID                     uuid.UUID    `bun:"id,pk"`
-	MadeAt                 time.Time    `bun:"made_at"`
-	Image                  string       `bun:"image"`
-	EnvironmentPrepareCode []string     `bun:"environment_prepare_code"`
-	ExecutionCode          string       `bun:"execution_code"`
-	Source                 []SourceFile `bun:"source"`
-	Maker                  uuid.UUID    `bun:"maker"`
-	Status                 TaskStatus   `bun:"status"`
+	ID                     uuid.UUID     `bun:"id,pk"`
+	MadeAt                 time.Time     `bun:"made_at"`
+	Image                  string        `bun:"image"`
+	EnvironmentPrepareCode []string      `bun:"environment_prepare_code"`
+	ExecutionCode          string        `bun:"execution_code"`
+	Source                 []source.File `bun:"source"`
+	Maker                  uuid.UUID     `bun:"maker"`
+	Status                 TaskStatus    `bun:"status"`
+
+	Execution *string `bun:"rel:has-one,join:id=task_id"`
 }

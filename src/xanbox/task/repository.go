@@ -8,9 +8,10 @@ import (
 )
 
 type TaskRepository interface {
-	Create(ctx context.Context, task *Task) error
+	Create(ctx context.Context, task *Task, execID string) (id uuid.UUID, err error)
 	Get(ctx context.Context, id uuid.UUID) (*Task, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, newStatus TaskStatus) error
 }
 
 type taskRepository struct {
@@ -24,9 +25,15 @@ func NewTaskRepository(db *bun.DB) TaskRepository {
 func (r *taskRepository) Create(
 	ctx context.Context,
 	task *Task,
-) error {
-	_, err := r.db.NewInsert().Model(task).Exec(ctx)
-	return err
+	execID string,
+) (uuid.UUID, error) {
+	_, err := r.db.
+		NewInsert().
+		Model(task).
+		Returning("id").
+		Exec(ctx)
+
+	return task.ID, err
 }
 
 func (r *taskRepository) Get(
@@ -49,5 +56,19 @@ func (r *taskRepository) Delete(
 	id uuid.UUID,
 ) error {
 	_, err := r.db.NewDelete().Model((*Task)(nil)).Where("id = ?", id).Exec(ctx)
+	return err
+}
+
+func (r *taskRepository) UpdateStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	newStatus TaskStatus,
+) error {
+	_, err := r.db.NewUpdate().
+		Model((*Task)(nil)).
+		Set("status = ?", newStatus).
+		Where("id = ?", id).
+		Exec(ctx)
+
 	return err
 }

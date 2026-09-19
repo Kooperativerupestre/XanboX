@@ -15,4 +15,12 @@ CREATE TABLE tasks (
     status TEXT NOT NULL CHECK(status IN ('pending', 'failed', 'successful')) DEFAULT 'pending'
 );
 
+CREATE TABLE executions (
+    id TEXT PRIMARY KEY
+);
 
+CREATE TABLE task_executions (
+    task_id UUID PRIMARY KEY REFERENCES tasks(id),
+    begin_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    execution_id TEXT NOT NULL REFERENCES executions(id) ON DELETE CASCADE
+);
