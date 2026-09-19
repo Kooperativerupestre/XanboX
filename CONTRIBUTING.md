@@ -17,6 +17,7 @@ add
 delete
 refactor
 fix
+build
 ```
 
 The theme is optional and identifies the part of the project affected by the commit.
