@@ -26,7 +26,7 @@ func (tr *TaskExecutionsStorage) add(execution *executionContainer) {
 	tr.mu.Lock()
 	defer tr.mu.Unlock()
 
-	tr.tasks[execution.ExecID] = execution
+	tr.tasks[execution.execID] = execution
 }
 
 func (tr *TaskExecutionsStorage) delete(id string) {

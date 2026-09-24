@@ -16,7 +16,7 @@ func execute(
 ) error {
 	exec, err := dockerClient.ExecCreate(
 		ctx,
-		c.ExecID,
+		c.execID,
 		client.ExecCreateOptions{
 			Cmd: []string{"sh", "-c", executionCode},
 		},
@@ -24,6 +24,8 @@ func execute(
 	if err != nil {
 		return err
 	}
+
+	c.AddExecID(exec.ID)
 
 	response, err := dockerClient.ExecAttach(
 		ctx,

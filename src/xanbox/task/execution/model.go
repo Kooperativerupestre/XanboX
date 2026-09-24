@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"sync"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -13,15 +14,28 @@ type ExecutionOutput struct {
 }
 
 type executionContainer struct {
-	ExecID      string
+	mu          sync.RWMutex
+	execID      string
 	ContainerID string
 	Stdout      synchronizedBuffer
 	Stderr      synchronizedBuffer
 }
 
-func NewExecutionContainer(id string) *executionContainer {
+func (exC *executionContainer) ExecID() string {
+	exC.mu.RLock()
+	defer exC.mu.RUnlock()
+	return exC.execID
+}
+
+func (exC *executionContainer) AddExecID(newID string) {
+	exC.mu.Lock()
+	defer exC.mu.Unlock()
+	exC.execID = newID
+}
+
+func NewExecutionContainer(containerID string) *executionContainer {
 	return &executionContainer{
-		ExecID: id,
+		ContainerID: containerID,
 	}
 }
 

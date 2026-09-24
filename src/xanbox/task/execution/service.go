@@ -55,7 +55,7 @@ func (tm *taskManager) IsFinished(
 
 	inspection, err := tm.dockerClient.ExecInspect(
 		ctx,
-		execution.ExecID,
+		execution.ExecID(),
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
@@ -76,7 +76,7 @@ func (tm *taskManager) Failed(
 
 	inspection, err := tm.dockerClient.ExecInspect(
 		ctx,
-		execution.ExecID,
+		execution.ExecID(),
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
@@ -101,7 +101,7 @@ func (tm *taskManager) Successful(
 
 	inspection, err := tm.dockerClient.ExecInspect(
 		ctx,
-		execution.ExecID,
+		execution.ExecID(),
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
@@ -191,7 +191,7 @@ func (tm *taskManager) Create(
 		)
 	}()
 
-	return execution.ExecID, nil
+	return execution.ExecID(), nil
 }
 
 func (tm *taskManager) Stop(
@@ -279,7 +279,7 @@ func (tm *taskManager) TryDelete(
 
 	inspection, err := tm.dockerClient.ExecInspect(
 		ctx,
-		execution.ExecID,
+		execution.ExecID(),
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
