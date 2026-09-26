@@ -160,6 +160,9 @@ func (tm *taskManager) Create(
 		)
 	}()
 
+	if err := createExecution(ctx, execution, tm.dockerClient, executionCode); err != nil {
+		return "", err
+	}
 	if err := resolveDependencies(
 		ctx,
 		execution,

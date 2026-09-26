@@ -20,7 +20,7 @@ func resolveDependencies(
 	for _, command := range commands {
 		exec, err := dockerClient.ExecCreate(
 			ctx,
-			c.execID,
+			c.ContainerID,
 			client.ExecCreateOptions{
 				Cmd: []string{"sh", "-c", command},
 			},
@@ -100,7 +100,7 @@ func addSourceFiles(
 
 	_, err := dockerClient.CopyToContainer(
 		ctx,
-		c.execID,
+		c.ContainerID,
 		client.CopyToContainerOptions{
 			DestinationPath: "/workspace",
 			Content:         &buffer,

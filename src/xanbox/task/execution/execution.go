@@ -8,7 +8,7 @@ import (
 	"github.com/moby/moby/client"
 )
 
-func execute(
+func createExecution(
 	ctx context.Context,
 	c *executionContainer,
 	dockerClient *client.Client,
@@ -16,20 +16,29 @@ func execute(
 ) error {
 	exec, err := dockerClient.ExecCreate(
 		ctx,
-		c.execID,
+		c.ContainerID,
 		client.ExecCreateOptions{
 			Cmd: []string{"sh", "-c", executionCode},
 		},
 	)
+
 	if err != nil {
 		return err
 	}
-
 	c.AddExecID(exec.ID)
+	return nil
+}
+
+func execute(
+	ctx context.Context,
+	c *executionContainer,
+	dockerClient *client.Client,
+	executionCode string,
+) error {
 
 	response, err := dockerClient.ExecAttach(
 		ctx,
-		exec.ID,
+		c.ExecID(),
 		client.ExecAttachOptions{},
 	)
 	if err != nil {
@@ -49,7 +58,7 @@ func execute(
 
 	inspection, err := dockerClient.ExecInspect(
 		ctx,
-		exec.ID,
+		c.ExecID(),
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
