@@ -1,4 +1,4 @@
-name: Go
+name: CI
 
 on:
   push:
@@ -15,20 +15,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
+      - name: Set up environment
+        run: |
+          cat << 'EOF' > .env
+          DATABASE_URL=postgres://xanbox:password@postgres:5432/xanbox?sslmode=disable
+          TEST_DATABASE_URL=postgres://xanbox:password@test-postgres:5432/test_xanbox?sslmode=disable
+          POSTGRES_DB=xanbox
+          TEST_POSTGRES_DB=test_xanbox
+          POSTGRES_PASSWORD=password
+          POSTGRES_USER=xanbox
+          EOF
 
-      - name: Verify dependencies
-        run: go mod verify
+      - name: Start test database
+        run: docker compose up -d --wait test-postgres
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Pre-pull container images
+        run: |
+          docker pull python:3.13
+          docker pull golang:1.26
 
-      - name: Run go test
-        run: go test -race ./...
+      - name: Run tests inside Docker
+        run: |
+          docker run --rm \
+            --network xanbox_default \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/app \
+            -w /app \
+            -e TEST_DATABASE_URL="postgres://xanbox:password@test-postgres:5432/test_xanbox?sslmode=disable" \
+            golang:1.26 \
+            sh -c "go vet ./... && go test -v -race ./... && go build -v ./..."
 
-      - name: Run go build
-        run: go build -v ./...
 
