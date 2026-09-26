@@ -5,6 +5,7 @@ import (
 
 	"github.com/Kooperativerupestre/XanboX/src/xanbox/task/source"
 	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 )
 
 type TaskStatus string
@@ -33,4 +34,17 @@ type Task struct {
 	Status                 TaskStatus    `bun:"status"`
 
 	Execution *string `bun:"rel:has-one,join:id=task_id"`
+}
+
+type executionRecord struct {
+	bun.BaseModel `bun:"table:executions"`
+
+	ID string `bun:"id,pk"`
+}
+
+type taskExecutionRecord struct {
+	bun.BaseModel `bun:"table:task_executions"`
+
+	TaskID      uuid.UUID `bun:"task_id,pk"`
+	ExecutionID string    `bun:"execution_id"`
 }

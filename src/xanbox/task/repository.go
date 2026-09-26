@@ -25,13 +25,29 @@ func NewTaskRepository(db *bun.DB) TaskRepository {
 func (r *taskRepository) Create(
 	ctx context.Context,
 	task *Task,
-	execID string,
+	containerID string,
 ) (uuid.UUID, error) {
-	_, err := r.db.
-		NewInsert().
-		Model(task).
-		Returning("id").
-		Exec(ctx)
+	err := r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewInsert().
+			Model(task).
+			Returning("id").
+			Exec(ctx); err != nil {
+			return err
+		}
+
+		execution := &executionRecord{ID: containerID}
+		if _, err := tx.NewInsert().Model(execution).Exec(ctx); err != nil {
+			return err
+		}
+
+		link := &taskExecutionRecord{
+			TaskID:      task.ID,
+			ExecutionID: containerID,
+		}
+		_, err := tx.NewInsert().Model(link).Exec(ctx)
+
+		return err
+	})
 
 	return task.ID, err
 }
