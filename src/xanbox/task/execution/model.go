@@ -19,6 +19,8 @@ type executionContainer struct {
 	ContainerID string
 	Stdout      synchronizedBuffer
 	Stderr      synchronizedBuffer
+	finished    bool
+	exitCode    int
 }
 
 func (exC *executionContainer) ExecID() string {
@@ -31,6 +33,25 @@ func (exC *executionContainer) AddExecID(newID string) {
 	exC.mu.Lock()
 	defer exC.mu.Unlock()
 	exC.execID = newID
+}
+
+func (exC *executionContainer) IsFinished() bool {
+	exC.mu.RLock()
+	defer exC.mu.RUnlock()
+	return exC.finished
+}
+
+func (exC *executionContainer) ExitCode() int {
+	exC.mu.RLock()
+	defer exC.mu.RUnlock()
+	return exC.exitCode
+}
+
+func (exC *executionContainer) SetFinished(exitCode int) {
+	exC.mu.Lock()
+	defer exC.mu.Unlock()
+	exC.finished = true
+	exC.exitCode = exitCode
 }
 
 func NewExecutionContainer(containerID string) *executionContainer {
@@ -50,6 +71,7 @@ func initialize(
 			Config: &container.Config{
 				Image:      image,
 				WorkingDir: "/workspace",
+				Cmd:        []string{"sleep", "infinity"},
 			},
 		},
 	)

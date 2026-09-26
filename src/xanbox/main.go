@@ -16,6 +16,10 @@ func main() {
 
 	r := chi.NewRouter()
 
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
 	ts := execution.NewTaskExecutionsStorage()
 	tm, err := execution.NewTaskManager(ts)
 

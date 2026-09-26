@@ -37,7 +37,7 @@ func createHandler(service TaskService) http.HandlerFunc {
 			if deleteErr != nil {
 				http.Error(
 					w,
-					"failed to create task and failed to clean up execution",
+					"failed to create task: "+err.Error()+" (cleanup error: "+deleteErr.Error()+")",
 					http.StatusInternalServerError,
 				)
 				return
@@ -45,7 +45,7 @@ func createHandler(service TaskService) http.HandlerFunc {
 
 			http.Error(
 				w,
-				"failed to create task",
+				"failed to create task: "+err.Error(),
 				http.StatusInternalServerError,
 			)
 			return
@@ -99,7 +99,7 @@ func syncHandler(service TaskService) http.HandlerFunc {
 		}
 
 		if err := service.Sync(r.Context(), id); err != nil {
-			http.Error(w, "failed to sync task", http.StatusInternalServerError)
+			http.Error(w, "failed to sync task: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 

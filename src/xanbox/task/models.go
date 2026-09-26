@@ -24,16 +24,16 @@ func ValidateStatus(status string) bool {
 }
 
 type Task struct {
-	ID                     uuid.UUID     `bun:"id,pk"`
+	ID                     uuid.UUID            `bun:"id,pk,default:gen_random_uuid()"`
 	MadeAt                 time.Time     `bun:"made_at"`
 	Image                  string        `bun:"image"`
-	EnvironmentPrepareCode []string      `bun:"environment_prepare_code"`
+	EnvironmentPrepareCode []string             `bun:"environment_prepare_code,array"`
 	ExecutionCode          string        `bun:"execution_code"`
 	Source                 []source.File `bun:"source"`
 	Maker                  uuid.UUID     `bun:"maker"`
 	Status                 TaskStatus    `bun:"status"`
 
-	Execution *string `bun:"rel:has-one,join:id=task_id"`
+	Execution *taskExecutionRecord `bun:"rel:has-one,join:id=task_id"`
 }
 
 type executionRecord struct {

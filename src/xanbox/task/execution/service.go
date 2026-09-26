@@ -53,16 +53,7 @@ func (tm *taskManager) IsFinished(
 		return false, fmt.Errorf("execution %q not found", id)
 	}
 
-	inspection, err := tm.dockerClient.ExecInspect(
-		ctx,
-		execution.ExecID(),
-		client.ExecInspectOptions{},
-	)
-	if err != nil {
-		return false, err
-	}
-
-	return !inspection.Running, nil
+	return execution.IsFinished(), nil
 }
 
 func (tm *taskManager) Failed(
@@ -74,20 +65,11 @@ func (tm *taskManager) Failed(
 		return false, fmt.Errorf("execution %q not found", id)
 	}
 
-	inspection, err := tm.dockerClient.ExecInspect(
-		ctx,
-		execution.ExecID(),
-		client.ExecInspectOptions{},
-	)
-	if err != nil {
-		return false, err
-	}
-
-	if inspection.Running {
+	if !execution.IsFinished() {
 		return false, nil
 	}
 
-	return inspection.ExitCode != 0, nil
+	return execution.ExitCode() != 0, nil
 }
 
 func (tm *taskManager) Successful(
@@ -99,20 +81,11 @@ func (tm *taskManager) Successful(
 		return false, fmt.Errorf("execution %q not found", id)
 	}
 
-	inspection, err := tm.dockerClient.ExecInspect(
-		ctx,
-		execution.ExecID(),
-		client.ExecInspectOptions{},
-	)
-	if err != nil {
-		return false, err
-	}
-
-	if inspection.Running {
+	if !execution.IsFinished() {
 		return false, nil
 	}
 
-	return inspection.ExitCode == 0, nil
+	return execution.ExitCode() == 0, nil
 }
 
 func (tm *taskManager) GetOutput(
@@ -280,23 +253,16 @@ func (tm *taskManager) TryDelete(
 		)
 	}
 
-	inspection, err := tm.dockerClient.ExecInspect(
-		ctx,
-		execution.ExecID(),
-		client.ExecInspectOptions{},
-	)
-	if err != nil {
-		return TryDeleteDeleted, err
-	}
-
-	if inspection.Running {
+	if !execution.IsFinished() {
 		return TryDeleteRunning, nil
 	}
 
-	_, err = tm.dockerClient.ContainerRemove(
+	_, err := tm.dockerClient.ContainerRemove(
 		ctx,
 		execution.ContainerID,
-		client.ContainerRemoveOptions{},
+		client.ContainerRemoveOptions{
+			Force: true,
+		},
 	)
 	if err != nil {
 		return TryDeleteDeleted, err

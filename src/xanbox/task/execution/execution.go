@@ -42,6 +42,7 @@ func execute(
 		client.ExecAttachOptions{},
 	)
 	if err != nil {
+		c.SetFinished(-1)
 		return err
 	}
 
@@ -53,6 +54,7 @@ func execute(
 	response.Close()
 
 	if err != nil {
+		c.SetFinished(-1)
 		return err
 	}
 
@@ -62,8 +64,11 @@ func execute(
 		client.ExecInspectOptions{},
 	)
 	if err != nil {
+		c.SetFinished(-1)
 		return err
 	}
+
+	c.SetFinished(inspection.ExitCode)
 
 	if inspection.ExitCode != 0 {
 		return fmt.Errorf(
