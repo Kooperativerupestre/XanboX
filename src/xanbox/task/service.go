@@ -10,7 +10,7 @@ import (
 type TaskService interface {
 	Create(ctx context.Context, task *Task) (db_id uuid.UUID, docker_id string, err error, delete_err error)
 	Get(ctx context.Context, id uuid.UUID) (*Task, error)
-	Sync(ctx context.Context, dbID uuid.UUID, dockerID string) error
+	Sync(ctx context.Context, dbID uuid.UUID) error
 }
 
 type taskService struct {
@@ -53,12 +53,7 @@ func (s *taskService) Get(
 	return task, err
 }
 
-func (s *taskService) Sync(
-	ctx context.Context,
-	dbID uuid.UUID,
-	dockerID string,
-) error {
-
+func (s *taskService) Sync(ctx context.Context, dbID uuid.UUID) error {
 	task, err := s.repo.Get(ctx, dbID)
 	if err != nil {
 		return err
@@ -68,7 +63,12 @@ func (s *taskService) Sync(
 		return nil
 	}
 
-	isFinished, err := s.tm.IsFinished(ctx, dockerID)
+	containerID, err := s.repo.GetContainerID(ctx, dbID)
+	if err != nil {
+		return err
+	}
+
+	isFinished, err := s.tm.IsFinished(ctx, containerID)
 	if err != nil {
 		return err
 	}
@@ -77,23 +77,29 @@ func (s *taskService) Sync(
 		return nil
 	}
 
-	isSuccessful, err := s.tm.Successful(ctx, dockerID)
+	isSuccessful, err := s.tm.Successful(ctx, containerID)
 	if err != nil {
 		return err
 	}
 
-	isFailed, err := s.tm.Failed(ctx, dockerID)
-	if err != nil {
-		return err
-	}
-
+	newStatus := TaskFailed
 	if isSuccessful {
-		return s.repo.UpdateStatus(ctx, dbID, TaskSuccessful)
+		newStatus = TaskSuccessful
 	}
 
-	if isFailed {
-		return s.repo.UpdateStatus(ctx, dbID, TaskFailed)
+	updated, err := s.repo.UpdateStatus(ctx, dbID, newStatus)
+
+	if err != nil {
+		return err
 	}
 
-	return nil
+	if !updated {
+		return nil
+	}
+
+	if _, err := s.tm.TryDelete(ctx, containerID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteExecution(ctx, containerID)
 }

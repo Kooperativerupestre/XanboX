@@ -11,7 +11,9 @@ type TaskRepository interface {
 	Create(ctx context.Context, task *Task, execID string) (id uuid.UUID, err error)
 	Get(ctx context.Context, id uuid.UUID) (*Task, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	UpdateStatus(ctx context.Context, id uuid.UUID, newStatus TaskStatus) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, newStatus TaskStatus) (bool, error)
+	DeleteExecution(ctx context.Context, containerID string) error
+	GetContainerID(ctx context.Context, taskID uuid.UUID) (string, error)
 }
 
 type taskRepository struct {
@@ -51,6 +53,18 @@ func (r *taskRepository) Create(
 
 	return task.ID, err
 }
+func (r *taskRepository) DeleteExecution(
+	ctx context.Context,
+	containerID string,
+) error {
+	_, err := r.db.
+		NewDelete().
+		Model((*executionRecord)(nil)).
+		Where("id = ?", containerID).
+		Exec(ctx)
+
+	return err
+}
 
 func (r *taskRepository) Get(
 	ctx context.Context,
@@ -67,6 +81,24 @@ func (r *taskRepository) Get(
 	return task, nil
 }
 
+func (r *taskRepository) GetContainerID(
+	ctx context.Context,
+	taskID uuid.UUID,
+) (string, error) {
+	link := new(taskExecutionRecord)
+
+	err := r.db.NewSelect().
+		Model(link).
+		Where("task_id = ?", taskID).
+		Scan(ctx)
+
+	if err != nil {
+		return "", err
+	}
+
+	return link.ExecutionID, nil
+}
+
 func (r *taskRepository) Delete(
 	ctx context.Context,
 	id uuid.UUID,
@@ -79,12 +111,21 @@ func (r *taskRepository) UpdateStatus(
 	ctx context.Context,
 	id uuid.UUID,
 	newStatus TaskStatus,
-) error {
-	_, err := r.db.NewUpdate().
+) (bool, error) {
+	res, err := r.db.NewUpdate().
 		Model((*Task)(nil)).
 		Set("status = ?", newStatus).
-		Where("id = ?", id).
+		Where("id = ? AND status = ?", id, TaskPending).
 		Exec(ctx)
 
-	return err
+	if err != nil {
+		return false, err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+
+	return rows > 0, nil
 }

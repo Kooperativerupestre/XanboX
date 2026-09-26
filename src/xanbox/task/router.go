@@ -98,14 +98,7 @@ func syncHandler(service TaskService) http.HandlerFunc {
 			return
 		}
 
-		var req SyncTaskRequest
-
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "invalid JSON", http.StatusBadRequest)
-			return
-		}
-
-		if err := service.Sync(r.Context(), id, req.DockerID); err != nil {
+		if err := service.Sync(r.Context(), id); err != nil {
 			http.Error(w, "failed to sync task", http.StatusInternalServerError)
 			return
 		}
