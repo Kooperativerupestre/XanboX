@@ -43,6 +43,6 @@ jobs:
             -w /app \
             -e TEST_DATABASE_URL="postgres://xanbox:password@test-postgres:5432/test_xanbox?sslmode=disable" \
             golang:1.26 \
-            sh -c "go vet ./... && go test -v -race ./... && go build -v ./..."
+            sh -c "git config --global --add safe.directory '*' && go vet ./... && go test -v -race ./... && go build -v -buildvcs=false ./..."
 
 
